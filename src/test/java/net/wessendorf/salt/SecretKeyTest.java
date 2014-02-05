@@ -19,10 +19,13 @@ package net.wessendorf.salt;
 import org.jboss.aerogear.AeroGearCrypto;
 import org.jboss.aerogear.crypto.CryptoBox;
 import org.jboss.aerogear.crypto.Random;
+import org.jboss.aerogear.crypto.password.DefaultPbkdf2;
 import org.jboss.aerogear.crypto.password.Pbkdf2;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.crypto.SecretKey;
 import java.security.spec.InvalidKeySpecException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,11 +36,9 @@ public class SecretKeyTest {
 
 
 
-
-    private byte[] privateKeyToBeStoredInDatabase;
     private byte[] IV_ToBeStoredInDatabase;
     private byte[] ciphertextToBeStoredInDatabase;
-
+    private byte[] saltToBeStoredInDatabase;
 
 
     @Before
@@ -49,23 +50,27 @@ public class SecretKeyTest {
         // TODO:
         // I am not sure if it is a good idea to use
         // the actual passphrase (for the certificate) for the generation of the privateKey:
-        privateKeyToBeStoredInDatabase = pbkdf2.encrypt(passphraseForCertificateRequiredByAPNs);
-
+        saltToBeStoredInDatabase = new Random().randomBytes();
+        SecretKey secretKey = pbkdf2.generateSecretKey(passphraseForCertificateRequiredByAPNs, saltToBeStoredInDatabase, AeroGearCrypto.ITERATIONS);
 
         // get me a crypto box
-        CryptoBox cryptoBox = new CryptoBox(privateKeyToBeStoredInDatabase);
-
+        CryptoBox cryptoBox = new CryptoBox(secretKey.getEncoded());
         // generate the IV and the ciphertext (using the given passphrase)
         // and stash em, to be stored (e.g. in database) as well:
         IV_ToBeStoredInDatabase = new Random().randomBytes();
         ciphertextToBeStoredInDatabase = cryptoBox.encrypt(IV_ToBeStoredInDatabase, passphraseForCertificateRequiredByAPNs.getBytes());
     }
 
-    @Test
+    @Test @Ignore
     public void decryptTheEncryptedApplePassphrase() throws InvalidKeySpecException {
 
-        // use the stored private key:
-        CryptoBox pandora = new CryptoBox(privateKeyToBeStoredInDatabase);
+        // here I don't have access to the PLAINTEXT version of the password - since that
+        // is only submitted once, when a new iOS variant is being created.
+
+        // This section is to simulate the connection to apple (mainly I need to run the decryption)...
+        // But well.... now, how do I actually get a Crypto box, to be able to perform the 'decrypt' ?
+        // Since I also have no access to the privateKey...   Not do I have access to the  CryptoBox used for the encryption
+        CryptoBox pandora = null; //new CryptoBox(privateKeyToBeStoredInDatabase);
 
         // apply the actual decryption so that we can connect to Apple's cloud:
         byte[] message = pandora.decrypt(IV_ToBeStoredInDatabase, ciphertextToBeStoredInDatabase);
